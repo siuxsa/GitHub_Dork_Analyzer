@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Dork Analyzer</title>
+    <style>
+        /* ASCII Banner Styles */
+        #banner {
+            color: #4CAF50;
+            text-align: center;
+            font-family: monospace;
+            margin: 20px 0;
+            white-space: pre;
+        }
+
+        /* Fixed Footer Styles */
+        #creditFooter {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: #f8f9fa;
+            padding: 10px;
+            text-align: center;
+            border-top: 1px solid #dee2e6;
+            z-index: 1000;
+        }
+        #creditFooter a {
+            color: #4CAF50;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        #creditFooter a:hover {
+            text-decoration: underline;
+        }
+
+        /* Add padding to body to prevent content hiding */
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 20px;
+            padding-bottom: 60px; /* Match footer height */
+        }
+
+        /* Rest of the styles */
+        .input-group { margin-bottom: 15px; }
+        #linksContainer { margin-top: 20px; }
+        .batch-container { margin: 20px 0; border: 1px solid #ddd; padding: 15px; border-radius: 4px; }
+        .batch-header { margin-bottom: 10px; }
+        .link { padding: 8px; margin: 5px 0; cursor: pointer; background-color: #f0f0f0; border-radius: 4px; word-wrap: break-word; }
+        .link:hover { background-color: #e0e0e0; }
+        .visited { background-color: #c1e1c1 !important; }
+        button { padding: 8px 16px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background-color: #45a049; }
+        .search-type { margin: 10px 0; display: flex; gap: 15px; }
+        .search-type label { display: flex; align-items: center; gap: 5px; }
+        .batch-header button.opened { background-color: #808080; cursor: not-allowed; }
+        .batch-header button.opened:hover { background-color: #808080; }
+    </style>
+</head>
+<body>
+    <!-- Protected Elements -->
+    <div id="banner">
+ ███████╗  ██╗  ██╗  ██████╗  ███████╗ ██╗  ███████╗ 
+ ██╔════╝  ██║  ██║ ██╔═══██╗ ██╔══██╝ ██║  ██╔════╝ 
+  ███████╗  ███████║ ██║   ██║ ███████╗ ██║  ███████╗  
+ ╚════██║  ██╔══██║ ██║   ██║ ██╔══██║ ██║  ██╔════╝ 
+ ███████║  ██║  ██║ ╚██████╔╝ ██║  ██║ ██║  ██║      
+╚══════╝  ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═╝  ╚═╝     
+    </div>
+
+    <!-- Main Application -->
+    <h1>GitHub Dork Analyzer</h1>
+    <div class="input-group">
+        <label for="domain">Target Domain/Org:</label>
+        <input type="text" id="domain" placeholder="github.com">
+    </div>
+    <div class="search-type">
+        <label><input type="radio" name="searchType" value="domain" checked> Domain</label>
+        <label><input type="radio" name="searchType" value="org"> Organization</label>
+    </div>
+    <div class="input-group">
+        <label for="dorkFile">Dork File (.txt):</label>
+        <input type="file" id="dorkFile" accept=".txt">
+    </div>
+    <button onclick="processDorks()">Process Dorks</button>
+    <div id="linksContainer"></div>
+
+    <!-- Fixed Footer -->
+    <div id="creditFooter">
+        Created by <a href="https://www.facebook.com/md.shorif.ahammed.07" target="_blank">SA SHORIF</a>
+    </div>
+
+    <!-- Protection Script -->
+    <script>
+        const verifyIntegrity = () => {
+            const requiredElements = [
+                document.getElementById('banner'),
+                document.getElementById('creditFooter'),
+                document.querySelector('input[name="searchType"]')
+            ];
+            if (requiredElements.some(el => !el)) {
+                document.body.innerHTML = '<h1 style="color: red">⚠️ Tampering Detected - Tool Disabled ⚠️</h1>';
+                window.stop();
+                throw new Error('Integrity check failed');
+            }
+        };
+        setInterval(verifyIntegrity, 1000);
+        document.addEventListener('DOMContentLoaded', verifyIntegrity);
+    </script>
+
+    <!-- Main Application Script -->
+    <script>
+        let generatedLinks = [];
+        const searchTypes = [
+            'issues', 'pullrequests', 'discussions', 
+            'users', 'commits', 'registrypackages',
+            'wikis', 'topics', 'marketplace'
+        ];
+
+        function getSearchPrefix() {
+            const searchType = document.querySelector('input[name="searchType"]:checked').value;
+            const target = document.getElementById('domain').value.trim();
+            return searchType === 'org' ? `org:${target}` : `"${target}"`;
+        }
+
+        function getRandomType(previousType) {
+            const availableTypes = searchTypes.filter(t => t !== previousType);
+            return availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        }
+
+        function processDorks() {
+            verifyIntegrity();
+            const domain = document.getElementById('domain').value.trim();
+            const prefix = getSearchPrefix();
+            const fileInput = document.getElementById('dorkFile');
+            const linksContainer = document.getElementById('linksContainer');
+            
+            if (!domain) return alert('Please enter a domain/org');
+            if (!fileInput.files[0]) return alert('Please select a dork file');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const dorks = e.target.result.split('\n')
+                    .map(line => line.trim())
+                    .filter(line => line.length > 0);
+
+                let previousType = null;
+                generatedLinks = dorks.map(dork => {
+                    const type = getRandomType(previousType);
+                    previousType = type;
+                    return {
+                        url: `https://github.com/search?q=${encodeURIComponent(`${prefix} ${dork}`)}&type=${type}`,
+                        type: type,
+                        dork: dork
+                    };
+                });
+
+                linksContainer.innerHTML = '';
+                for (let i = 0; i < generatedLinks.length; i += 5) {
+                    const batchContainer = document.createElement('div');
+                    batchContainer.className = 'batch-container';
+                    
+                    // Batch header with button
+                    const batchHeader = document.createElement('div');
+                    batchHeader.className = 'batch-header';
+                    const button = document.createElement('button');
+                    button.textContent = `Open Dorks ${i+1}-${Math.min(i+5, generatedLinks.length)}`;
+                    button.onclick = () => openBatch(i, button);
+                    batchHeader.appendChild(button);
+                    batchContainer.appendChild(batchHeader);
+
+                    // Batch links
+                    generatedLinks.slice(i, i+5).forEach((link, index) => {
+                        const linkElement = document.createElement('div');
+                        linkElement.className = 'link';
+                        linkElement.innerHTML = `${i + index + 1}. Search: ${prefix} ${link.dork} [type: ${link.type}]`;
+                        linkElement.onclick = () => {
+                            window.open(link.url, '_blank', 'noopener,noreferrer');
+                            linkElement.classList.add('visited');
+                        };
+                        batchContainer.appendChild(linkElement);
+                    });
+
+                    linksContainer.appendChild(batchContainer);
+                }
+            };
+            reader.readAsText(fileInput.files[0]);
+        }
+
+        function openBatch(startIndex, button) {
+            verifyIntegrity();
+            const batchLinks = generatedLinks.slice(startIndex, startIndex + 5);
+            batchLinks.forEach((link, i) => {
+                setTimeout(() => {
+                    window.open(link.url, '_blank', 'noopener,noreferrer');
+                    document.querySelectorAll('.link')[startIndex + i].classList.add('visited');
+                }, i * 300);
+            });
+            button.classList.add('opened');
+            button.disabled = true;
+            setTimeout(() => window.focus(), 1500);
+        }
+    </script>
+</body>
+</html>
