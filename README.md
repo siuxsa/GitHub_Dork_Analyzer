@@ -29,7 +29,7 @@ A client-side tool to analyze GitHub dorks by generating search links for a targ
 
 1. Clone the repository or download the HTML file:
    ```bash
-   git clone https://github.com/yourusername/github-dork-analyzer.git
+   git clone https://github.com/siuxsa/GitHub_Dork_Analyzer.git
    ```
 ## Usage
 
